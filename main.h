@@ -175,7 +175,7 @@ class Alive : public entity
 {
     public:
     int Look_out[3];
-    int nav;
+    int nav = 0;
     int hungry = 100;
     virtual void live (){};
     virtual void walk (int nav, map **World){};
@@ -243,6 +243,8 @@ class grass_eat : private Alive
                 break;
             }
             int new_navig = rand()%4;
+            if(new_navig > 4)
+                new_navig = rand()%4;
             this->walk(new_navig, World);
             this->Look(nav,World);
             this->starvation(2);
@@ -286,6 +288,7 @@ class grass_eat : private Alive
         int maxX, maxY;
         int myXpos, myYpos;
         entity replace;
+        entity new_me(this->Stat);
         this->pos_get(&myXpos, &myYpos);
         this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
@@ -296,7 +299,7 @@ class grass_eat : private Alive
                 return;
             World[myYpos-1][myXpos].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos-1][myXpos].Map_update(*this);
+            World[myYpos-1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos-1);
             return;
             break;
@@ -305,7 +308,7 @@ class grass_eat : private Alive
                 return;
             World[myYpos][myXpos+1].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos][myXpos+1].Map_update(*this);
+            World[myYpos][myXpos+1].Map_update(new_me);
             this->pos_set(myXpos+1, myYpos);
             return;
             break;
@@ -314,7 +317,7 @@ class grass_eat : private Alive
                 return;
             World[myYpos+1][myXpos].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos+1][myXpos].Map_update(*this);
+            World[myYpos+1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos+1);
             return;
             break;
@@ -323,7 +326,7 @@ class grass_eat : private Alive
                 return;
             World[myYpos][myXpos-1].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos][myXpos-1].Map_update(*this);
+            World[myYpos][myXpos-1].Map_update(new_me);
             this->pos_set(myXpos-1, myYpos);
             return;
             break;
@@ -341,34 +344,42 @@ class grass_eat : private Alive
             case 0: 
             World[y_pos-1][x_pos].get_whatOn(&check);
             if(check == 5 || check == 8)
+            {
                 World[y_pos-1][x_pos].Map_update(new_air);
                 if(check == 8)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 1: 
             World[y_pos][x_pos+1].get_whatOn(&check);
             if(check == 5 || check == 8)
+            {
                 World[y_pos][x_pos+1].Map_update(new_air);
                 if(check == 8)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 2: 
             World[y_pos+1][x_pos].get_whatOn(&check);
             if(check == 5 || check == 8)
+            {
                 World[y_pos+1][x_pos].Map_update(new_air);
                 if(check == 8)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 3: 
             World[y_pos][x_pos-1].get_whatOn(&check);
             if(check == 5 || check == 8)
+            {
                 World[y_pos][x_pos-1].Map_update(new_air);
                 if(check == 8)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             default:
             break;
@@ -445,34 +456,41 @@ class Predator : private Alive
             case 0: 
             World[y_pos-1][x_pos].get_whatOn(&check);
             if(check == 1 || check == 6)
+            {
                 World[y_pos-1][x_pos].Map_update(new_air);
                 if(check == 1)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 1: 
             World[y_pos][x_pos+1].get_whatOn(&check);
             if(check == 1 || check == 6)
+            {
                 World[y_pos][x_pos+1].Map_update(new_air);
                 if(check == 1)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 2: 
             World[y_pos+1][x_pos].get_whatOn(&check);
-            if(check == 1 || check == 6)
+            if(check == 1 || check == 6){
                 World[y_pos+1][x_pos].Map_update(new_air);
                 if(check == 1)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             case 3: 
             World[y_pos][x_pos-1].get_whatOn(&check);
             if(check == 1 || check == 6)
+            {
                 World[y_pos][x_pos-1].Map_update(new_air);
                 if(check == 1)
                     this->hungry = this->hungry + 20;
                 this->hungry = hungry + 20;
+            }
             break;
             default:
             break;
@@ -527,6 +545,8 @@ class Predator : private Alive
             }
             this->starvation(2);
             int new_navig = rand()%4;
+            if(new_navig > 4)
+                new_navig = rand()%4;
             this->walk(new_navig, World);
             this->Look(nav,World);
             for(int h = 0; h <= 3; h++)
@@ -590,6 +610,7 @@ class Predator : private Alive
         int maxX, maxY;
         int myXpos, myYpos;
         entity replace;
+        entity new_me(this->Stat);
         this->pos_get(&myXpos, &myYpos);
         this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
@@ -600,7 +621,7 @@ class Predator : private Alive
                 return;
             World[myYpos-1][myXpos].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos-1][myXpos].Map_update(*this);
+            World[myYpos-1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos-1);
             return;
             break;
@@ -609,7 +630,7 @@ class Predator : private Alive
                 return;
             World[myYpos][myXpos+1].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos][myXpos+1].Map_update(*this);
+            World[myYpos][myXpos+1].Map_update(new_me);
             this->pos_set(myXpos+1, myYpos);
             return;
             break;
@@ -618,7 +639,7 @@ class Predator : private Alive
                 return;
             World[myYpos+1][myXpos].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos+1][myXpos].Map_update(*this);
+            World[myYpos+1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos+1);
             return;
             break;
@@ -627,7 +648,7 @@ class Predator : private Alive
                 return;
             World[myYpos][myXpos-1].get_creature(&replace);
             World[myYpos][myXpos].Map_update(replace);
-            World[myYpos][myXpos-1].Map_update(*this);
+            World[myYpos][myXpos-1].Map_update(new_me);
             this->pos_set(myXpos-1, myYpos);
             return;
             break;
