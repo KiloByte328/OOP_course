@@ -7,16 +7,6 @@ void ScreenClear()
     system("cls");
 };
 
-/* int checking (int *mass, int mass_size_X)
-{
-        for(int i = 0; i <= mass_size_X;i++)
-        {
-            if(mass[i] == 1)
-                return 1;
-        }
-    return 0;
-}; */
-
 class entity
 {
     public:
@@ -39,7 +29,6 @@ class entity
         *get = this->Stat;
     };
 };
-
 
 class map
 {
@@ -90,6 +79,7 @@ class map
         this->set_size(new_sizeX, new_sizeY);
         this->set_creature(creat);
     }
+    void get_creature (entity *get){get = &creature;};
 };
 
 class NotAlive : public entity
@@ -156,12 +146,13 @@ class rock : private NotAlive
     private:
     int Stat = 7;
     public:
-    rock(int X, int Y, map **World):Stat(5)
+    rock(int X, int Y, map **World):Stat(7)
     {
         entity new_entity_fruit(this->Stat);
         World[Y][X].Map_update(new_entity_fruit);
         this->pos_set(X,Y); 
     };
+    rock(){this->Stat = 7;};
     void get_stat(int * get){*get = this->Stat;};
 };
 
@@ -170,12 +161,13 @@ class tree : private NotAlive
     private:
     int Stat = 8;
     public:
-    tree(int X, int Y, map **World):Stat(5)
+    tree(int X, int Y, map **World):Stat(8)
     {
         entity new_entity_fruit(this->Stat);
         World[Y][X].Map_update(new_entity_fruit);
         this->pos_set(X,Y); 
     };
+    tree(){this->Stat = 8;};
     void get_stat(int * get){*get = this->Stat;};
 };
 
@@ -183,22 +175,26 @@ class Alive : public entity
 {
     public:
     int Look_out[3];
+    int nav;
     int hungry = 100;
     virtual void live (){};
     virtual void walk (int nav, map **World){};
     virtual void Look(int nav, map** EntireWorld){};
     virtual void print__what_see(){};
     virtual void eat(int nav, map** World){};
+    virtual void starvation(int starve){};
+    void Live(map **World){};
+    virtual void nav_set(int new_nav){};
+    virtual void av_get(int *get){};
 };
 
 class grass_eat : private Alive
 {
     private:
     int Stat = 1;
-    virtual void eat()
-    {
-
-    };
+    int died = 0;
+    int FindFood = 0;
+    int momento = 0;
     public:
     grass_eat(int X, int Y, map **World)
     {
@@ -206,24 +202,100 @@ class grass_eat : private Alive
         World[Y][X].Map_update(new_entity_grass);
         this->pos_set(X,Y); 
     };
-    grass_eat()
+    grass_eat(){this->Stat = 1;};
+    virtual void pos_get(int *X, int *Y){*X = this->x_pos; *Y = this->y_pos;};
+    virtual void Live(map **World)
     {
-        this->Stat = 1;
+        switch (momento)
+        {
+            case 0:
+            {
+        for(int i = 0; i <= 3; i++)
+        {
+            if(this->hungry <= 5)
+            {
+                this->died = 1;
+                break;
+            }
+            this->Look(i,World);
+            this->starvation(1);
+            for(int h = 0; h <= 3; h++)
+            {
+            if(this->Look_out[h] == 5 || this->Look_out[h] == 8)
+                {
+                    FindFood = 1;
+                    break;
+                }
+            }
+        }
+        if(died == 1)
+            break;
+        momento = 1;
+        break;
+        }
+        case 1:
+        {
+        if(FindFood == 0)
+        {
+            if(hungry <= 10)
+            {
+                died = 1;
+                break;
+            }
+            int new_navig = rand()%4;
+            this->walk(new_navig, World);
+            this->Look(nav,World);
+            this->starvation(2);
+            for(int h = 0; h <= 3; h++)
+            {
+            if(this->Look_out[h] == 5 || this->Look_out[h] == 8)
+            {
+                FindFood = 1;
+                    break;
+            }
+            }
+        }
+        if(FindFood == 1)
+        {
+            if(hungry <= 10)
+            {
+                died = 1;
+                break;
+            }
+            this->walk(nav, World);
+            this->Look(nav, World);
+            this->starvation(2);
+            if(this->Look_out[0] == 5 || this->Look_out[0] == 8)
+            {
+                this->eat(nav,World);
+                momento = 0;
+            }
+        }
+        if(died == 1)
+            break;
+        }
+        break;
+        }
     };
     private:
+    virtual void starvation(int starve){this->hungry = hungry-starve;};
+    virtual void nav_set(int new_nav){this->nav = nav;};
+    virtual void nav_get(int *get){*get = this->nav;};
     virtual void walk (int nav, map **World)
     {
         int maxX, maxY;
         int myXpos, myYpos;
-        Air new_air;
+        entity replace;
         this->pos_get(&myXpos, &myYpos);
+        this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
         switch (nav)
         {
         case 0:
             if(myYpos -1 < 0)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos-1][myXpos].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos-1][myXpos].Map_update(*this);
             this->pos_set(myXpos, myYpos-1);
             return;
@@ -231,7 +303,8 @@ class grass_eat : private Alive
         case 1:
             if(myXpos+1 > maxX)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos][myXpos+1].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos+1].Map_update(*this);
             this->pos_set(myXpos+1, myYpos);
             return;
@@ -239,7 +312,8 @@ class grass_eat : private Alive
         case 2:
             if (myYpos+1 > maxY)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos+1][myXpos].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos+1][myXpos].Map_update(*this);
             this->pos_set(myXpos, myYpos+1);
             return;
@@ -247,7 +321,8 @@ class grass_eat : private Alive
         case 3:
             if(myXpos-1 < 0)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos][myXpos-1].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos-1].Map_update(*this);
             this->pos_set(myXpos-1, myYpos);
             return;
@@ -255,6 +330,7 @@ class grass_eat : private Alive
         default:
             break;
         }
+        return;
     };
     virtual void eat(int nav, map** World)
     {
@@ -298,13 +374,13 @@ class grass_eat : private Alive
             break;
         }
     };
-    /*  first iteration of look
     virtual void Look(int nav, map** EntireWorld)
     {
         int Xmax, Ymax;
         int curX, curY;
         int count = 0;
         this->pos_get(&curX, &curY);
+        this->nav_set(nav);
         EntireWorld[0][0].get_size(&Xmax, &Ymax);
          switch (nav)
         {
@@ -343,7 +419,7 @@ class grass_eat : private Alive
         default:
             break;
         }
-    }; */
+    };
     /* virtual void print__what_see()
     {
         for(int i = 0; i != 3; i++)
@@ -357,6 +433,9 @@ class Predator : private Alive
 {
     private:
     int Stat = 2;
+    int died = 0;
+    int FindFood = 0;
+    int momento = 0;
     void attack(int nav, map** World)
     {
         Air new_air;
@@ -406,24 +485,121 @@ class Predator : private Alive
         World[Y][X].Map_update(new_entity_pred);
         this->pos_set(X,Y); 
     };
-    Predator()
+    Predator(){this->Stat = 2;};
+    virtual void pos_get(int *X, int *Y){*X = this->x_pos; *Y = this->y_pos;};
+    virtual void Live(map **World)
     {
-        this->Stat = 2;
+        switch (momento)
+        {
+            case 0:
+            {
+        for(int i = 0; i <= 3; i++)
+        {
+            if(this->hungry <= 5)
+            {
+                this->died = 1;
+                break;
+            }
+            this->Look(i,World);
+            this->starvation(1);
+            for(int h = 0; h <= 3; h++)
+            {
+            if(this->Look_out[h] == 1 || this->Look_out[h] == 6)
+                {
+                    FindFood = 1;
+                    break;
+                }
+            }
+        }
+        if(died == 1)
+            break;
+        momento = 1;
+        break;
+        }
+        case 1:
+        {
+        if(FindFood == 0)
+        {
+            if(hungry <= 10)
+            {
+                died = 1;
+                break;
+            }
+            this->starvation(2);
+            int new_navig = rand()%4;
+            this->walk(new_navig, World);
+            this->Look(nav,World);
+            for(int h = 0; h <= 3; h++)
+            {
+            if(this->Look_out[h] == 1 || this->Look_out[h] == 6)
+            {
+                FindFood = 1;
+                    break;
+            }
+            }
+        }
+        if(FindFood == 1)
+        {
+            if(hungry <= 10)
+            {
+                died = 1;
+                break;
+            }
+            this->starvation(2);
+            this->walk(nav, World);
+            this->Look(nav, World);
+            if(this->Look_out[0] == 1 || this->Look_out[0] == 6)
+            {
+                this->attack(nav,World);
+                momento = 0;
+            }
+        }
+        if(died == 1)
+            break;
+        }
+        break;
+        }
     };
     private:
+    virtual void search(map **World)
+    {
+        for(int i = 0; i <= 3; i++)
+        {
+            if(this->hungry <= 5)
+            {
+                this->died = 1;
+                break;
+            }
+            this->Look(i,World);
+            this->starvation(5);
+            for(int h = 0; h <= 3; h++)
+            {
+            if(this->Look_out[h] == 1 || this->Look_out[h] == 6)
+            {
+                FindFood = 1;
+                    break;
+            }
+            }
+        }
+        };
+    virtual void nav_set(int new_nav){this->nav = new_nav;};
+    virtual void nav_get(int *get){*get = this->nav;};
+    virtual void starvation(int starve){this->hungry = hungry-starve;};
     virtual void walk (int nav, map **World)
     {
         int maxX, maxY;
         int myXpos, myYpos;
-        Air new_air;
+        entity replace;
         this->pos_get(&myXpos, &myYpos);
+        this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
         switch (nav)
         {
         case 0:
             if(myYpos -1 < 0)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos-1][myXpos].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos-1][myXpos].Map_update(*this);
             this->pos_set(myXpos, myYpos-1);
             return;
@@ -431,7 +607,8 @@ class Predator : private Alive
         case 1:
             if(myXpos+1 > maxX)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos][myXpos+1].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos+1].Map_update(*this);
             this->pos_set(myXpos+1, myYpos);
             return;
@@ -439,7 +616,8 @@ class Predator : private Alive
         case 2:
             if (myYpos+1 > maxY)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos+1][myXpos].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos+1][myXpos].Map_update(*this);
             this->pos_set(myXpos, myYpos+1);
             return;
@@ -447,7 +625,8 @@ class Predator : private Alive
         case 3:
             if(myXpos-1 < 0)
                 return;
-            World[myYpos][myXpos].Map_update(new_air);
+            World[myYpos][myXpos-1].get_creature(&replace);
+            World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos-1].Map_update(*this);
             this->pos_set(myXpos-1, myYpos);
             return;
@@ -457,7 +636,6 @@ class Predator : private Alive
         }
         return;
     };
-   /*  first iteration of look
     virtual void Look(int nav, map** EntireWorld)
     {
         int Xmax, Ymax;
@@ -502,7 +680,7 @@ class Predator : private Alive
         default:
             break;
         }
-    }; */
+    };
     /* virtual void print__what_see(map** World)
     {
         int mX, mY;
@@ -521,92 +699,7 @@ class Predator : private Alive
         std::cout << std::endl;
     }; */
 };
-/* 
-class all_ent : private Air, private Predator, private Fruit, private Meat, private grass_eat
-{
-    private:
-    int Stat;
-    void set_stat(int new_stat){this->Stat = new_stat;};
-    public:
-    void get_stat(int *get){*get = this->Stat;};
-    all_ent(int Stat){this->set_stat(Stat);};
-}; */
 
-/* class all_in
-{
-    private:
-    int pred_max = 0; int grass_max = 0; int meat_max = 0;int fruit_max = 0; int trees_max = 0;
-    Predator **pred_pack;
-    grass_eat **grass_pack;
-    Meat **meat_pack;
-    Fruit **fruit_pack;
-    tree **trees_pack;
-    void set_max(int p, int g, int m, int f, int t)
-    {
-        pred_max = p;
-        for(int count = pred_max;;)
-        grass_max = g;
-        meat_max = m;
-        fruit_max = f;
-        trees_max = t;
-    };
-    void set_new_pred(Predator *new_pred)
-    {
-        pred_pack[pred_max+1] = new_pred;
-        pred_max++;
-    };
-    void set_new_grass(grass_eat *new_grass)
-    {
-        grass_pack[grass_max+1] = new_grass;
-        grass_max++;
-    };
-    void set_new_meat(Meat *new_meat)
-    {
-        meat_pack[meat_max+1] = new_meat;
-        meat_max++;
-    };
-    void set_new_fruit(Fruit *new_fuit)
-    {
-        fruit_pack[fruit_max+1] = new_fuit;
-        fruit_max++;
-    };
-    void set_new_tree(tree *new_tree)
-    {
-        trees_pack[trees_max+1] = new_tree;
-        trees_max++;
-    };
-    public:
-    all_in(int p, int g, int m, int f, int t)
-    {
-
-    }
-    void get_pred(int get,Predator *get_pred)
-    {
-        get_pred = this->pred_pack[get];
-    };
-    void get_grass(int get,grass_eat *get_grass)
-    {
-        get_grass = this->grass_pack[get];
-    };
-    void get_meat(int get,Meat *get_meat)
-    {
-        get_meat = this->meat_pack[get];
-    };
-    void get_fruit(int get,Fruit *get_fruit)
-    {
-        get_fruit = this->fruit_pack[get];
-    };
-    void get_tree(int get,tree *get_tree)
-    {
-        get_tree = this->trees_pack[get];
-    };
-    virtual void all_in_update(Predator *new_pred){this->set_new_pred(new_pred);};
-    virtual void all_in_update(grass_eat *new_grass){this->set_new_grass(new_grass);};
-    virtual void all_in_update(Meat *new_meat){this->set_new_meat(new_meat);};
-    virtual void all_in_update(Fruit *new_fruit){this->set_new_fruit(new_fruit);};
-    virtual void all_in_update(tree *new_tree){this->set_new_tree(new_tree);};
-};
- */
 int SceenRender(map** map_render, int degree)
 {
     int whaton, sizeX, sizeY;
@@ -726,13 +819,13 @@ int SceenRender(map** map_render, int degree)
                 std::cout << ". ";
                 break;
             }
-        }
+            }
             std::cout << "\n";
         }
     return 0;
 };
 
-void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
+void generateEntireWorld(int *pred, int *Al, int *notAl, int *meat, int *fukt, map** WorldMap)
 {
     int sizeX, sizeY;
     WorldMap[0][0].get_size(&sizeX, &sizeY);
@@ -748,6 +841,22 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
     NAL = ((sizeX % 7) + (sizeY % 7));
     if (NAL == 0)
         NAL = 2;
+    *pred = Predators;
+    *Al = Alive;
+    *notAl = NAL;
+    *meat = meats;
+    *fukt = fruits;
+};
+
+void spawn(int P, int A, int N_A_L, int _meats, int _fruits, map **WorldMap, Predator *predats, grass_eat *grassets, Meat *mmeats, Fruit *ffruits, tree *treees)
+{
+    int sizeX, sizeY;
+    int Predators = P;
+    int Alive = A;
+    int NAL = N_A_L;
+    int meats = _meats;
+    int fruits = _fruits;
+    WorldMap[0][0].get_size(&sizeX, &sizeY);
     int **dis = new int*[sizeY];
     for(int j = 0; j <= sizeX; j++)
     {
@@ -760,7 +869,11 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
                 dis[i][k] = 0;
             }
         }
-    int count = 0;
+    int count_pred = 0;
+    int count_Alive = 0;
+    int count_meats = 0;
+    int count_fruits = 0;
+    int count_tres = 0;
     while (true)
     {
         if (Predators != 0)
@@ -775,9 +888,9 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
                 }
             dis[Y][X] = 1;
             Predator new_pred(X,Y,WorldMap);
-            /* all.all_in_update(&new_pred); */
+            predats[count_pred] = new_pred;
             Predators--;
-            count++;
+            count_pred++;
         }
         if (Alive != 0)
         {
@@ -791,9 +904,9 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
                 }
             dis[Y][X] = 1;
             grass_eat new_grass(X,Y,WorldMap);
-           /*  all.all_in_update(&new_grass); */
+            grassets[count_Alive] = new_grass;
             Alive--;
-            count++;
+            count_Alive++;
         }
         if(NAL != 0)
         {
@@ -811,10 +924,10 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
             else
                 {
                     tree new_tree(X, Y, WorldMap);
-                    /* all.all_in_update(&new_tree); */
+                    treees[count_tres] = new_tree;
+                    count_tres++;
                 }
             NAL--;
-            count++;
         }
         if(meats != 0)
         {
@@ -828,9 +941,9 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
                 }
             dis[Y][X] = 1;
             Meat new_meat(X, Y, WorldMap);
-            /* all.all_in_update(&new_meat); */
+            mmeats[count_meats] = new_meat;
             meats--;
-            count++;
+            count_meats++;
         }
         if(fruits != 0)
         {
@@ -844,11 +957,11 @@ void generateEntireWorld(map **WorldMap/* , all_in new_all*/)
                 }
             dis[Y][X] = 1;
             Fruit new_fruit(X, Y, WorldMap);
-            /* all.all_in_update(&new_fruit); */
+            ffruits[count_fruits] = new_fruit;
             fruits--;
-            count++;
+            count_fruits++;
         }
         if (Predators == 0 && Alive == 0 && NAL == 0 && meats == 0 && fruits == 0)
             return ;
     }
-};
+}
