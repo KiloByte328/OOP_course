@@ -23,7 +23,7 @@ class entity
         *X = this->x_pos;
         *Y = this->y_pos;
     };
-    void set_status (){};
+    void set_status (int new_stat){this->Stat = new_stat;};
     void get_status(int* get)
     {
         *get = this->Stat;
@@ -48,7 +48,7 @@ class map
     };
     void set_creature(entity new_creature)
     {
-        creature = new_creature;
+        creature.set_status(new_creature.Stat);
     };
     public:
     virtual void get_postion(int getX, int getY)
@@ -67,7 +67,7 @@ class map
     };
     virtual void Map_update(entity new_ent)
     {
-        this->set_creature(new_ent);
+        this->creature = new_ent;
     }
     virtual void Map_update(int newX, int newY)
     {
@@ -178,7 +178,7 @@ class Alive : public entity
     int nav = 0;
     int hungry = 100;
     virtual void live (){};
-    virtual void walk (int nav, map **World){};
+    virtual int walk (int nav, map **World){};
     virtual void Look(int nav, map** EntireWorld){};
     virtual void print__what_see(){};
     virtual void eat(int nav, map** World){};
@@ -218,18 +218,19 @@ class grass_eat : private Alive
                 break;
             }
             this->Look(i,World);
-            this->starvation(1);
-            for(int h = 0; h <= 3; h++)
+            this->starvation(5);
+            for(int h = 0; h < 3; h++)
             {
             if(this->Look_out[h] == 5 || this->Look_out[h] == 8)
                 {
                     FindFood = 1;
-                    break;
+                    momento = 1;
+                    return;
                 }
             }
         }
         if(died == 1)
-            break;
+            return;
         momento = 1;
         break;
         }
@@ -240,20 +241,28 @@ class grass_eat : private Alive
             if(hungry <= 10)
             {
                 died = 1;
-                break;
+                return;
             }
             int new_navig = rand()%4;
             if(new_navig > 4)
                 new_navig = rand()%4;
+            this->Look(new_navig,World);
+            for(;(Look_out[0] >= 1 && Look_out[0] < 5) || (Look_out[0] > 5 && Look_out[0] < 8);)
+            {
+                new_navig++;
+                if(new_navig == 4)
+                    new_navig == 0;
+                this->Look(new_navig, World);
+            }
             this->walk(new_navig, World);
             this->Look(nav,World);
-            this->starvation(2);
+            this->starvation(5);
             for(int h = 0; h <= 3; h++)
             {
             if(this->Look_out[h] == 5 || this->Look_out[h] == 8)
             {
                 FindFood = 1;
-                    break;
+                    return;
             }
             }
         }
@@ -262,19 +271,20 @@ class grass_eat : private Alive
             if(hungry <= 10)
             {
                 died = 1;
-                break;
+                return;
             }
             this->walk(nav, World);
             this->Look(nav, World);
-            this->starvation(2);
+            this->starvation(5);
             if(this->Look_out[0] == 5 || this->Look_out[0] == 8)
             {
                 this->eat(nav,World);
                 momento = 0;
+                return;
             }
         }
         if(died == 1)
-            break;
+            return;
         }
         break;
         }
@@ -283,12 +293,14 @@ class grass_eat : private Alive
     virtual void starvation(int starve){this->hungry = hungry-starve;};
     virtual void nav_set(int new_nav){this->nav = nav;};
     virtual void nav_get(int *get){*get = this->nav;};
-    virtual void walk (int nav, map **World)
+    virtual int walk (int nav, map **World)
     {
         int maxX, maxY;
         int myXpos, myYpos;
-        entity replace;
-        entity new_me(this->Stat);
+        Air replace;
+        int check_stat;
+        entity new_me;
+        new_me.set_status(this->Stat);
         this->pos_get(&myXpos, &myYpos);
         this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
@@ -296,44 +308,60 @@ class grass_eat : private Alive
         {
         case 0:
             if(myYpos -1 < 0)
-                return;
-            World[myYpos-1][myXpos].get_creature(&replace);
+                return -1;
+            /* World[myYpos-1][myXpos].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos-1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos-1);
-            return;
+            
+            /* else    
+                return -1; */
             break;
         case 1:
             if(myXpos+1 > maxX)
-                return;
-            World[myYpos][myXpos+1].get_creature(&replace);
+                return -1;
+            /* World[myYpos][myXpos+1].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos+1].Map_update(new_me);
             this->pos_set(myXpos+1, myYpos);
-            return;
+            
+            /* else
+                return -1; */
             break;
         case 2:
             if (myYpos+1 > maxY)
-                return;
-            World[myYpos+1][myXpos].get_creature(&replace);
+                return -1;
+            /* World[myYpos+1][myXpos].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos+1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos+1);
-            return;
+            
+            /* else
+                return -1; */
             break;
         case 3:
             if(myXpos-1 < 0)
-                return;
-            World[myYpos][myXpos-1].get_creature(&replace);
+                return -1;
+            /* World[myYpos][myXpos-1].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos-1].Map_update(new_me);
             this->pos_set(myXpos-1, myYpos);
-            return;
+            
+            /* else
+                return -1; */
             break;
         default:
             break;
         }
-        return;
+        return 0;
     };
     virtual void eat(int nav, map** World)
     {
@@ -420,7 +448,7 @@ class grass_eat : private Alive
         }
             break;
         case 3:
-        for(int temp_cur;curX != 0 && curX != temp_cur-3;)
+        for(int temp_cur = curX;curX != 0 && curX != temp_cur-3;)
         {
             curX--;
             EntireWorld[curY][curX].get_whatOn(&this->Look_out[count]);
@@ -516,21 +544,22 @@ class Predator : private Alive
             if(this->hungry <= 5)
             {
                 this->died = 1;
-                break;
+                return;
             }
             this->Look(i,World);
-            this->starvation(1);
+            this->starvation(5);
             for(int h = 0; h <= 3; h++)
             {
             if(this->Look_out[h] == 1 || this->Look_out[h] == 6)
                 {
                     FindFood = 1;
-                    break;
+                    momento = 1;
+                    return;
                 }
             }
         }
         if(died == 1)
-            break;
+            return;
         momento = 1;
         break;
         }
@@ -541,41 +570,51 @@ class Predator : private Alive
             if(hungry <= 10)
             {
                 died = 1;
-                break;
+                return;
             }
-            this->starvation(2);
+            this->starvation(5);
             int new_navig = rand()%4;
             if(new_navig > 4)
                 new_navig = rand()%4;
+            this->Look(new_navig,World);
+            for(;(Look_out[0] >= 2 && Look_out[0] < 6) || (Look_out[0] > 6 && Look_out[0] <= 8);)
+            {
+                new_navig++;
+                if(new_navig == 4)
+                    new_navig == 0;
+                this->Look(new_navig, World);
+            }
             this->walk(new_navig, World);
             this->Look(nav,World);
-            for(int h = 0; h <= 3; h++)
+            for(int h = 0; h < 3; h++)
             {
             if(this->Look_out[h] == 1 || this->Look_out[h] == 6)
             {
                 FindFood = 1;
-                    break;
+                    return;
             }
             }
+            momento = 0;
         }
         if(FindFood == 1)
         {
             if(hungry <= 10)
             {
                 died = 1;
-                break;
+                return;
             }
-            this->starvation(2);
+            this->starvation(5);
             this->walk(nav, World);
             this->Look(nav, World);
             if(this->Look_out[0] == 1 || this->Look_out[0] == 6)
             {
                 this->attack(nav,World);
                 momento = 0;
+                return;
             }
         }
         if(died == 1)
-            break;
+            return;
         }
         break;
         }
@@ -605,12 +644,14 @@ class Predator : private Alive
     virtual void nav_set(int new_nav){this->nav = new_nav;};
     virtual void nav_get(int *get){*get = this->nav;};
     virtual void starvation(int starve){this->hungry = hungry-starve;};
-    virtual void walk (int nav, map **World)
+    virtual int walk (int nav, map **World)
     {
         int maxX, maxY;
         int myXpos, myYpos;
-        entity replace;
-        entity new_me(this->Stat);
+        Air replace;
+        int check_stat;
+        entity new_me;
+        new_me.set_status(this->Stat);
         this->pos_get(&myXpos, &myYpos);
         this->nav_set(nav);
         World[0][0].get_size(&maxX, &maxY);
@@ -618,44 +659,58 @@ class Predator : private Alive
         {
         case 0:
             if(myYpos -1 < 0)
-                return;
-            World[myYpos-1][myXpos].get_creature(&replace);
+                return -1;
+            /* World[myYpos-1][myXpos].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos-1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos-1);
-            return;
+            
+            /* else    
+                return -1; */
             break;
         case 1:
             if(myXpos+1 > maxX)
-                return;
-            World[myYpos][myXpos+1].get_creature(&replace);
+                return -1;
+            /* World[myYpos][myXpos+1].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos+1].Map_update(new_me);
             this->pos_set(myXpos+1, myYpos);
-            return;
+            /* else
+                return -1; */
             break;
         case 2:
             if (myYpos+1 > maxY)
-                return;
-            World[myYpos+1][myXpos].get_creature(&replace);
+                return -1;
+            /* World[myYpos+1][myXpos].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos+1][myXpos].Map_update(new_me);
             this->pos_set(myXpos, myYpos+1);
-            return;
+            
+            /* else
+                return -1; */
             break;
         case 3:
             if(myXpos-1 < 0)
-                return;
-            World[myYpos][myXpos-1].get_creature(&replace);
+                return -1;
+            /* World[myYpos][myXpos-1].get_whatOn(&check_stat); */
+            /* if(check_stat == 0) */
+            
             World[myYpos][myXpos].Map_update(replace);
             World[myYpos][myXpos-1].Map_update(new_me);
             this->pos_set(myXpos-1, myYpos);
-            return;
+            
+            /* else
+                return -1; */
             break;
         default:
             break;
         }
-        return;
+        return 0;
     };
     virtual void Look(int nav, map** EntireWorld)
     {
@@ -691,7 +746,7 @@ class Predator : private Alive
         }
             break;
         case 3:
-        for(int temp_cur;curX != 0 && curX != temp_cur-3;)
+        for(int temp_cur = curX;curX != 0 && curX != temp_cur-3;)
         {
             curX--;
             EntireWorld[curY][curX].get_whatOn(&this->Look_out[count]);
@@ -857,8 +912,8 @@ void generateEntireWorld(int *pred, int *Al, int *notAl, int *meat, int *fukt, m
     Alive = (sizeX % 3) + (sizeY % 3);
     if (Alive == 0)
         Alive = 1;
-    int meats = Predators * 3;
-    int fruits = Alive * 2;
+    int meats = Predators * 2;
+    int fruits = Alive * 3;
     NAL = ((sizeX % 7) + (sizeY % 7));
     if (NAL == 0)
         NAL = 2;
